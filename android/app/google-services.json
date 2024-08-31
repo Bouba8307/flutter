@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "79228092581",
+    "project_id": "system-help",
+    "storage_bucket": "system-help.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:79228092581:android:2e86c58ba5892ba4634d4c",
+        "android_client_info": {
+          "package_name": "com.example.system_help"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXrj-_v884cf_OYtqvo6ULNMjoNAQlWmo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
