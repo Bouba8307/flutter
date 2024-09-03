@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:system_help/widget/user_image_picker.dart';
 
 final _firebase = FirebaseAuth.instance;
 
@@ -16,16 +20,23 @@ class AuthScreenState extends State<AuthScreen> {
   var _enteredEmail = '';
   var _enteredPassword = '';
   final _form = GlobalKey<FormState>();
+  File? _selectedImage;
 
   var _isLogin = true;
+  var _isAuthenticating = false;
 
   Future<void> _submit() async {
     final isValid = _form.currentState!.validate();
-    if (!isValid) {
+    if (!isValid || !_isLogin && _selectedImage == null) {
       return;
     }
+
     _form.currentState!.save();
     try {
+      setState(() {
+        _isAuthenticating = true;
+      });
+
       if (_isLogin) {
         final UserCredentials = await _firebase.signInWithEmailAndPassword(
             email: _enteredEmail, password: _enteredPassword);
@@ -33,7 +44,23 @@ class AuthScreenState extends State<AuthScreen> {
       } else {
         final userCredentials = await _firebase.createUserWithEmailAndPassword(
             email: _enteredEmail, password: _enteredPassword);
-        print(userCredentials);
+        final storageRef = FirebaseStorage.instance
+            .ref('user_image')
+            .child('${userCredentials.user!.uid}.png');
+
+        await storageRef.putFile(_selectedImage!);
+        final imageUrl = await storageRef.getDownloadURL();
+        
+          await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredentials.user!.uid)
+            .set({
+                'fullname': 'to be done',
+               'username': 'to be done',
+               'email': _enteredEmail,
+               'image_url': imageUrl,
+               'role': 'to be done',
+        });
       }
     } on FirebaseAuthException catch (error) {
       _showErrorSnackBar(error.message ?? 'Authentification failed.');
@@ -47,6 +74,9 @@ class AuthScreenState extends State<AuthScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(message),
         ));
+        setState(() {
+          _isAuthenticating = false;
+        });
       }
     });
   }
@@ -78,6 +108,12 @@ class AuthScreenState extends State<AuthScreen> {
                   key: _form,
                   child: Column(
                     children: [
+                      if (!_isLogin)
+                        UserImagePicker(
+                          onPickedImage: (pickedImage) {
+                            _selectedImage = pickedImage;
+                          },
+                        ),
                       Container(
                         margin: const EdgeInsets.symmetric(horizontal: 30),
                         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -141,6 +177,7 @@ class AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
+                      if (_isAuthenticating) const CircularProgressIndicator(),
                       ElevatedButton(
                         onPressed: _submit,
                         style: ElevatedButton.styleFrom(
@@ -151,8 +188,7 @@ class AuthScreenState extends State<AuthScreen> {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                          child:
-                                  Text(_isLogin ? 'Connexion' : 'S\'inscrire'),
+                        child: Text(_isLogin ? 'Connexion' : 'S\'inscrire'),
                       ),
                       const SizedBox(height: 20),
                       const Text(
@@ -181,16 +217,17 @@ class AuthScreenState extends State<AuthScreen> {
                         ],
                       ),
                       const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isLogin = !_isLogin;
-                          });
-                        },
-                        child: Text(_isLogin
-                                  ? 'Créer un compte'
-                                  : 'Je suis déjà inscrite'),
-                      ),
+                      if (!_isAuthenticating)
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                            });
+                          },
+                          child: Text(_isLogin
+                              ? 'Créer un compte'
+                              : 'Je suis déjà inscrite'),
+                        ),
                     ],
                   ),
                 ),
