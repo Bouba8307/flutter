@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:system_help/widget/chat_messages.dart';
+import 'package:system_help/widget/new_messages.dart';
 
 void main() {
   runApp(Chat());
@@ -11,68 +13,35 @@ class Chat extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Chat UI',
       theme: ThemeData(
-        primarySwatch: Colors.purple,
+        primarySwatch: Colors.purple, // Optionally set a primary color or other theme data
       ),
-      home: ChatScreen(),
-    );
-  }
-}
-
-class ChatScreen extends StatelessWidget {
-  final List<Map<String, String>> chats = [
-    {'name': 'Mamadou Traore', 'message': 'C\'est ok', 'time': '10h09'},
-    {'name': 'Mamadou Traore', 'message': 'C\'est ok', 'time': '10h09'},
-    {
-      'name': 'Tienou Konteré',
-      'message': 'Merci beaucoup',
-      'time': 'yesterday'
-    },
-    {'name': 'Chaka Diabaté', 'message': 'Bien !', 'time': '5 Mars'},
-    {'name': 'Daouda Fomba', 'message': 'Bien vu merci !', 'time': '4 Mars'},
-    {'name': 'Peter Landt', 'message': 'Cool 😊', 'time': '4 Fevrier'},
-    {'name': 'Janice Nelson', 'message': 'Hello!', 'time': '3 Fevrier'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAF3FF),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        toolbarHeight: 80,
-        title: Padding(
-          padding: const EdgeInsets.only(top: 20),
-          child: TextField(
-            decoration: InputDecoration(
-              prefixIcon: const Icon(Icons.search),
-              hintText: 'Chercher',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(25),
-                borderSide: BorderSide.none,
+      home: Scaffold(
+        body: Stack(
+          children: [
+            // Background image
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/background.jpg',
+                fit: BoxFit.cover,
               ),
-              filled: true,
-              fillColor: Colors.white,
             ),
-          ),
+            // Column for chat content
+            Column(
+              children: [
+                Container(
+                  color: Colors.transparent, // Ensures that the background image is visible behind the AppBar
+                  child: AppBar(
+                    title: const Text('Chat'),
+                    backgroundColor: Colors.transparent, // Make AppBar background transparent
+                    elevation: 0, // Remove shadow to show the background image clearly
+                  ),
+                ),
+                const Expanded(child: ChatMessages()),
+                const NewMessages(),
+              ],
+            ),
+          ],
         ),
-      ),
-      body: ListView.builder(
-        itemCount: chats.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Colors.grey[300],
-              child: const Icon(Icons.person, color: Colors.white),
-            ),
-            title: Text(
-              chats[index]['name']!,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(chats[index]['message']!),
-            trailing: Text(chats[index]['time']!),
-          );
-        },
       ),
     );
   }

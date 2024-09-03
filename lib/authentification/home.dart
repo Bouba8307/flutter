@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'chat.dart'; // Import the Chat screen
-import 'profile.dart'; // Import the Profile screen
-import 'tickets.dart'; // Import the Tickets screen
+import '../widget/profile.dart'; // Import the Profile screen
+import '../widget/tickets.dart'; // Import the Tickets screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,7 +46,7 @@ class HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Color(0xFF6A48FF),
+        backgroundColor: const Color(0xFF6A48FF),
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         currentIndex: _selectedIndex,
@@ -101,7 +101,7 @@ class Home extends StatelessWidget {
                       FirebaseAuth.instance.signOut();
                     },
                     icon: Icon(
-                      Icons.logout,
+                      Icons.exit_to_app,
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),

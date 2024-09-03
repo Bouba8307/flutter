@@ -58,7 +58,7 @@ class Profile extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
 
               // Form Fields
               Padding(
@@ -74,7 +74,10 @@ class Profile extends StatelessWidget {
                     const SizedBox(height: 15),
                     buildTextField('Email', 'Barry@gmail.com'),
                     const SizedBox(height: 15),
-                    buildTextField('Photo', 'Fichier.png', isReadOnly: true),
+                    buildTextField(
+                      'Photo',
+                      'Fichier.png',
+                    ),
                   ],
                 ),
               ),
@@ -102,7 +105,7 @@ class Profile extends StatelessWidget {
                         // Implement logout functionality
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF6A48FF),
+                        backgroundColor: const Color(0xFF6A48FF),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 30, vertical: 15),
                       ),
