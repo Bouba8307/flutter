@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'chat.dart'; // Import the Chat screen
+import '../authentification/chat.dart'; // Import the Chat screen
 import '../widget/profile.dart'; // Import the Profile screen
-import '../widget/tickets.dart'; // Import the Tickets screen
+import 'tickets.dart'; // Import the Tickets screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,6 +60,7 @@ class HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.chat),
             label: 'Chat',
           ),
+          
           BottomNavigationBarItem(
             icon: Icon(Icons.confirmation_number),
             label: 'Tickets',

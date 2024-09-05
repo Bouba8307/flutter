@@ -1,8 +1,13 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:system_help/admin/accueil_admin.dart';
+import 'package:system_help/apprenant/accueil_apprenant.dart';
+import 'package:system_help/apprenant/home.dart';
+import 'package:system_help/formateur/accueil_formateur.dart';
 import 'package:system_help/widget/user_image_picker.dart';
 
 final _firebase = FirebaseAuth.instance;
@@ -11,13 +16,13 @@ class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
 
   @override
-  State<AuthScreen> createState() {
-    return AuthScreenState();
-  }
+  State<AuthScreen> createState() => AuthScreenState();
 }
 
 class AuthScreenState extends State<AuthScreen> {
   var _enteredEmail = '';
+  var _enteredNom = '';
+  var _enteredPrenom = '';
   var _enteredPassword = '';
   var _enteredUsername = '';
   final _form = GlobalKey<FormState>();
@@ -26,70 +31,102 @@ class AuthScreenState extends State<AuthScreen> {
   var _isLogin = true;
   var _isAuthenticating = false;
 
-Future<void> _submit() async {
-  final isValid = _form.currentState!.validate();
-  if (!isValid || (!_isLogin && _selectedImage == null)) {
-    return;
-  }
+  Future<void> _submit() async {
+    final isValid = _form.currentState!.validate();
+    if (!isValid || (!_isLogin && _selectedImage == null)) {
+      _showErrorSnackBar('Veuillez remplir tous les champs.');
+      return;
+    }
 
-  _form.currentState!.save();
-  try {
-    setState(() {
-      _isAuthenticating = true;
-    });
+    _form.currentState!.save();
 
-    if (_isLogin) {
-      // Sign in logic
-      final userCredentials = await _firebase.signInWithEmailAndPassword(
-          email: _enteredEmail, password: _enteredPassword);
-      print('User signed in: ${userCredentials.user!.email}');
-    } else {
-      // Sign up logic
-      final userCredentials = await _firebase.createUserWithEmailAndPassword(
-          email: _enteredEmail, password: _enteredPassword);
+    try {
+      setState(() {
+        _isAuthenticating = true;
+      });
 
-      final storageRef = FirebaseStorage.instance
-          .ref('user_image')
-          .child('${userCredentials.user!.uid}.png');
+      if (_isLogin) {
+        final userCredentials = await _firebase.signInWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
+        print('Utilisateur connecté : ${userCredentials.user!.email}');
+      } else {
+        final userCredentials = await _firebase.createUserWithEmailAndPassword(
+          email: _enteredEmail,
+          password: _enteredPassword,
+        );
 
-      // Upload image and get URL
-      try {
-        await storageRef.putFile(_selectedImage!);
-        final imageUrl = await storageRef.getDownloadURL();
+        String imageUrl = 'default_url';
+        if (!kIsWeb && _selectedImage != null) {
+          final storageRef = FirebaseStorage.instance
+              .ref('user_image')
+              .child('${userCredentials.user!.uid}.png');
 
-        // Store user data in Firestore
+          try {
+            await storageRef.putFile(_selectedImage!);
+            imageUrl = await storageRef.getDownloadURL();
+          } on FirebaseException catch (e) {
+            _showErrorSnackBar(
+                'Échec du téléchargement de l\'image : ${e.message ?? 'Erreur inconnue'}');
+            return;
+          }
+        }
+
         await FirebaseFirestore.instance
             .collection('users')
             .doc(userCredentials.user!.uid)
             .set({
-          'fullname': 'none', // Example field
+          'nom': _enteredNom,
+          'prenom': _enteredPrenom,
           'username': _enteredUsername,
           'email': _enteredEmail,
           'image_url': imageUrl,
-          'role': '', // Example field
+          'role': 'admin',
         });
-
-        print('User data stored successfully in Firestore.');
-      } on FirebaseException catch (e) {
-        _showErrorSnackBar(
-            'Image upload failed: ${e.message ?? 'Unknown error'}');
-        return;
-      } catch (e) {
-        _showErrorSnackBar(
-            'An error occurred while storing user data: ${e.toString()}');
-        return;
       }
+
+      if (_isLogin) {
+        await _navigateBasedOnUserRole();
+      }
+    } on FirebaseAuthException catch (error) {
+      _showErrorSnackBar(error.message ?? 'Échec de l\'authentification.');
+    } catch (e) {
+      _showErrorSnackBar(
+          'Une erreur inattendue est survenue : ${e.toString()}');
+    } finally {
+      setState(() {
+        _isAuthenticating = false;
+      });
     }
-  } on FirebaseAuthException catch (error) {
-    _showErrorSnackBar(error.message ?? 'Authentication failed.');
-  } catch (e) {
-    _showErrorSnackBar('An unexpected error occurred: ${e.toString()}');
-  } finally {
-    setState(() {
-      _isAuthenticating = false;
-    });
   }
-}
+
+  Future<void> _navigateBasedOnUserRole() async {
+    try {
+      User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        DocumentSnapshot userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        var role = userDoc.get('role');
+
+        if (role == 'admin') {
+          Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => AdminAccueil()));
+        } else if (role == 'formateur') {
+          Navigator.of(context).pushReplacement(MaterialPageRoute(
+              builder: (context) => const FormateurAccueil()));
+        } else if (role == 'apprenant') {
+          Navigator.of(context)
+              .pushReplacement(MaterialPageRoute(builder: (context) => HomeScreen()));
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar(
+          'Une erreur est survenue lors de la récupération du rôle.');
+    }
+  }
 
   void _showErrorSnackBar(String message) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -109,7 +146,7 @@ Future<void> _submit() async {
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/background.jpg'),
-            fit: BoxFit.cover, // Adapte l'image pour couvrir tout l'écran
+            fit: BoxFit.cover,
           ),
         ),
         child: Center(
@@ -125,8 +162,6 @@ Future<void> _submit() async {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Auth Form
                 Form(
                   key: _form,
                   child: Column(
@@ -137,10 +172,12 @@ Future<void> _submit() async {
                             _selectedImage = pickedImage;
                           },
                         ),
-
                       const SizedBox(height: 20),
-                      if (!_isLogin)
-                        _buildUsernameField(),
+                      if (!_isLogin) _buildNomField(),
+                      const SizedBox(height: 20),
+                      if (!_isLogin) _buildPrenomField(),
+                      const SizedBox(height: 20),
+                      if (!_isLogin) _buildUsernameField(),
                       const SizedBox(height: 20),
                       _buildEmailField(),
                       const SizedBox(height: 20),
@@ -149,13 +186,12 @@ Future<void> _submit() async {
                       TextButton(
                         onPressed: () {},
                         child: const Text(
-                          'Mot de passe ?',
+                          'Mot de passe oublié ?',
                           style: TextStyle(color: Colors.black54),
                         ),
                       ),
                       const SizedBox(height: 20),
                       if (_isAuthenticating) const CircularProgressIndicator(),
-
                       ElevatedButton(
                         onPressed: _submit,
                         style: ElevatedButton.styleFrom(
@@ -166,18 +202,17 @@ Future<void> _submit() async {
                             borderRadius: BorderRadius.circular(30),
                           ),
                         ),
-                        child: Text(_isLogin ? 'Connexion' : 'S\'inscrire'),
+                        child:(Text(_isLogin ? 'Connexion' : 'S\'inscrire', style: const TextStyle(color: Colors.white))),
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Continue avec',
+                        'Continuer avec',
                         style: TextStyle(color: Colors.black54),
                       ),
                       const SizedBox(height: 10),
                       _buildSocialIconsRow(),
                       const SizedBox(height: 20),
                       if (!_isAuthenticating)
-                        //bouton de changement de vue
                         TextButton(
                           onPressed: () {
                             setState(() {
@@ -199,6 +234,62 @@ Future<void> _submit() async {
     );
   }
 
+  Widget _buildNomField() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: TextFormField(
+        decoration: const InputDecoration(
+          hintText: 'Nom',
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.person),
+        ),
+        keyboardType: TextInputType.name,
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Veuillez entrer votre nom';
+          }
+          return null;
+        },
+        onSaved: (value) {
+          _enteredNom = value!;
+        },
+      ),
+    );
+  }
+
+  Widget _buildPrenomField() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: TextFormField(
+        decoration: const InputDecoration(
+          hintText: 'Prénom',
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.person),
+        ),
+        keyboardType: TextInputType.name,
+        validator: (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Veuillez entrer votre prénom';
+          }
+          return null;
+        },
+        onSaved: (value) {
+          _enteredPrenom = value!;
+        },
+      ),
+    );
+  }
+
   Widget _buildUsernameField() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 30),
@@ -215,7 +306,9 @@ Future<void> _submit() async {
         ),
         keyboardType: TextInputType.name,
         validator: (value) {
-          if (value == null || value.trim().isEmpty || value.trim().length < 4) {
+          if (value == null ||
+              value.trim().isEmpty ||
+              value.trim().length < 4) {
             return 'Veuillez entrer un nom d\'utilisateur de 4 caractères minimum';
           }
           return null;
@@ -237,7 +330,7 @@ Future<void> _submit() async {
       ),
       child: TextFormField(
         decoration: const InputDecoration(
-          hintText: 'Adresse mail',
+          hintText: 'Adresse email',
           border: InputBorder.none,
           prefixIcon: Icon(Icons.email),
         ),
@@ -268,12 +361,13 @@ Future<void> _submit() async {
           hintText: 'Mot de passe',
           border: InputBorder.none,
           prefixIcon: Icon(Icons.lock),
-          suffixIcon: Icon(Icons.visibility),
         ),
         obscureText: true,
         validator: (value) {
-          if (value == null || value.trim().length < 6) {
-            return 'Vous devez entrer un mot de passe de 6 caractères minimum';
+          if (value == null ||
+              value.trim().isEmpty ||
+              value.trim().length < 6) {
+            return 'Veuillez entrer un mot de passe d\'au moins 6 caractères';
           }
           return null;
         },
@@ -289,17 +383,12 @@ Future<void> _submit() async {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
+          icon: const Icon(Icons.facebook),
+          iconSize: 50,
+          onPressed: () {},
+        ),
+        IconButton(
           icon: Image.asset('assets/images/google.png'),
-          iconSize: 50,
-          onPressed: () {},
-        ),
-        IconButton(
-          icon: Image.asset('assets/images/apple.png'),
-          iconSize: 50,
-          onPressed: () {},
-        ),
-        IconButton(
-          icon: Image.asset('assets/images/facebook.png'),
           iconSize: 50,
           onPressed: () {},
         ),

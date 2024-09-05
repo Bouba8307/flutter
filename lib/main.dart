@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:system_help/authentification/home.dart';
+import 'package:system_help/apprenant/home.dart';
 import 'firebase_options.dart';
 import 'package:system_help/authentification/auth.dart';
 
@@ -29,9 +29,9 @@ class App extends StatelessWidget {
         home: StreamBuilder(
             stream: FirebaseAuth.instance.authStateChanges(),
             builder: (ctx, snapshot) {
-              if (snapshot.hasData) {
-                return const HomeScreen();
-              }
+              // if (snapshot.hasData) {
+              //   return const HomeScreen();
+              // }
               return const AuthScreen();
             }));
   }
